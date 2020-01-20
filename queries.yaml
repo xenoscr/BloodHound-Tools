@@ -62,32 +62,32 @@ front:
             name: Computers With Local Admin Data
             type: int
             query: |
-                MATCH (n)-[:AdminTo]->(c:Computer {{domain:{domain}}})
+                MATCH (n)-[:AdminTo]->(c:Computer {domain:{domain}})
                 WITH COUNT(DISTINCT(c)) as computersWithAdminsCount
-                MATCH (c2:Computer {{domain:{domain}}})
+                MATCH (c2:Computer {domain:{domain}})
                 RETURN toInt(100 * (toFloat(computersWithAdminsCount) / COUNT(c2)))
         2:
             name: Computers With Session Data
             type: int
             query: |
-                MATCH (c:Computer {{domain:{domain}}})-[:HasSession]->()
+                MATCH (c:Computer {domain:{domain}})-[:HasSession]->()
                 WITH COUNT(DISTINCT(c)) as computersWithSessions
-                MATCH (c2:Computer {{domain:{domain}}})
+                MATCH (c2:Computer {domain:{domain}})
                 RETURN toInt(100 * (toFloat(computersWithSessions) / COUNT(c2)))
         3:
             name: Users With Session Data
             type: int
             query: |
-                MATCH ()-[:HasSession]->(u:User {{domain:{domain}}})
+                MATCH ()-[:HasSession]->(u:User {domain:{domain}})
                 WITH COUNT(DISTINCT(u)) as usersWithSessions
-                MATCH (u2:User {{domain:{domain},enabled:true}})
+                MATCH (u2:User {domain:{domain},enabled:true})
                 RETURN toInt(100 * (toFloat(usersWithSessions) / COUNT(u2)))
 critical_asset_analysis:
     1:
         name: Admins on Domain Controllers
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid ENDS WITH "-516"
             MATCH (c:Computer)-[:MemberOf*1..]->(g)
             OPTIONAL MATCH (n)-[:AdminTo]->(c)
@@ -102,7 +102,7 @@ critical_asset_analysis:
         name: RDPers on Domain Controllers
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid ENDS WITH "-516"
             MATCH (c:Computer)-[:MemberOf*1..]->(g)
             OPTIONAL MATCH (n)-[:CanRDP]->(c)
@@ -117,17 +117,17 @@ critical_asset_analysis:
         name: Domain Controller GPO Controllers
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid ENDS WITH "-516"
             MATCH (c:Computer)-[:MemberOf*1..]->(g)
-            OPTIONAL MATCH p1 = (g1:GPO)-[r1:GpLink {{enforced:true}}]->(container1)-[r2:Contains*1..]->(c)
-            OPTIONAL MATCH p2 = (g2:GPO)-[r3:GpLink {{enforced:false}}]->(container2)-[r4:Contains*1..]->(c)
+            OPTIONAL MATCH p1 = (g1:GPO)-[r1:GpLink {enforced:true}]->(container1)-[r2:Contains*1..]->(c)
+            OPTIONAL MATCH p2 = (g2:GPO)-[r3:GpLink {enforced:false}]->(container2)-[r4:Contains*1..]->(c)
             WHERE NONE (x in NODES(p2) WHERE x.blocksinheritance = true AND x:OU AND NOT (g2)-->(x))
             WITH COLLECT(g1) + COLLECT(g2) AS tempVar1
             UNWIND tempVar1 as tempVar2
             WITH DISTINCT(tempVar2) as GPOs
-            OPTIONAL MATCH (n)-[{{isacl:true}}]->(GPOs)
-            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{{isacl:true}}]->(GPOs)
+            OPTIONAL MATCH (n)-[{isacl:true}]->(GPOs)
+            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{isacl:true}]->(GPOs)
             WITH COLLECT(n) + COLLECT(m) as tempVar1
             UNWIND tempVar1 as tempVar2
             RETURN DISTINCT(tempVar2.name)
@@ -140,7 +140,7 @@ critical_asset_analysis:
             UNWIND n.serviceprincipalnames AS spn 
             MATCH (n) WHERE TOUPPER(spn) CONTAINS "EXCHANGEMDB"
             WITH n as c
-            MATCH (c)-[:MemberOf*1..]->(g:Group {{domain:{domain}}})
+            MATCH (c)-[:MemberOf*1..]->(g:Group {domain:{domain}})
             WHERE g.name CONTAINS "EXCHANGE"
             OPTIONAL MATCH (n)-[:AdminTo]->(c)
             OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[:AdminTo]->(c)
@@ -155,7 +155,7 @@ critical_asset_analysis:
             UNWIND n.serviceprincipalnames AS spn 
             MATCH (n) WHERE TOUPPER(spn) CONTAINS "EXCHANGEMDB"
             WITH n as c
-            MATCH (c)-[:MemberOf*1..]->(g:Group {{domain:{domain}}})
+            MATCH (c)-[:MemberOf*1..]->(g:Group {domain:{domain}})
             WHERE g.name CONTAINS "EXCHANGE"
             OPTIONAL MATCH (n)-[:CanRDP]->(c)
             OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[:CanRDP]->(c)
@@ -170,16 +170,16 @@ critical_asset_analysis:
             UNWIND n.serviceprincipalnames AS spn 
             MATCH (n) WHERE TOUPPER(spn) CONTAINS "EXCHANGEMDB"
             WITH n as c
-            MATCH (c)-[:MemberOf*1..]->(g:Group {{domain:{domain}}})
+            MATCH (c)-[:MemberOf*1..]->(g:Group {domain:{domain}})
             WHERE g.name CONTAINS "EXCHANGE"
-            OPTIONAL MATCH p1 = (g1:GPO)-[r1:GpLink {{enforced:true}}]->(container1)-[r2:Contains*1..]->(c)
-            OPTIONAL MATCH p2 = (g2:GPO)-[r3:GpLink {{enforced:false}}]->(container2)-[r4:Contains*1..]->(c)
+            OPTIONAL MATCH p1 = (g1:GPO)-[r1:GpLink {enforced:true}]->(container1)-[r2:Contains*1..]->(c)
+            OPTIONAL MATCH p2 = (g2:GPO)-[r3:GpLink {enforced:false}]->(container2)-[r4:Contains*1..]->(c)
             WHERE NONE (x in NODES(p2) WHERE x.blocksinheritance = true AND x:OU AND NOT (g2)-->(x))
             WITH COLLECT(g1) + COLLECT(g2) AS tempVar1
             UNWIND tempVar1 as tempVar2
             WITH DISTINCT(tempVar2) as GPOs
-            OPTIONAL MATCH (n)-[{{isacl:true}}]->(GPOs)
-            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{{isacl:true}}]->(GPOs)
+            OPTIONAL MATCH (n)-[{isacl:true}]->(GPOs)
+            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{isacl:true}]->(GPOs)
             WITH COLLECT(n) + COLLECT(m) as tempVar1
             UNWIND tempVar1 as tempVar2
             RETURN DISTINCT(tempVar2.name)
@@ -188,10 +188,10 @@ critical_asset_analysis:
         name: Domain Admin Controllers
         type: list
         query: |
-            MATCH (DAUser)-[:MemberOf*1..]->(g:Group {{domain:{domain}}})
+            MATCH (DAUser)-[:MemberOf*1..]->(g:Group {domain:{domain}})
             WHERE g.objectsid ENDS WITH "-512"
-            OPTIONAL MATCH (n)-[{{isacl:true}}]->(DAUser)
-            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{{isacl:true}}]->(DAUser)
+            OPTIONAL MATCH (n)-[{isacl:true}]->(DAUser)
+            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{isacl:true}]->(DAUser)
             WITH COLLECT(n) + COLLECT(m) as tempVar1
             UNWIND tempVar1 AS DAControllers
             RETURN DISTINCT(DAControllers.name)
@@ -200,7 +200,7 @@ critical_asset_analysis:
         name: Computers With DA Sessions
         type: list
         query: |
-            MATCH (c:Computer)-[:HasSession]->()-[:MemberOf*1..]->(g:Group {{domain:{domain}}})
+            MATCH (c:Computer)-[:HasSession]->()-[:MemberOf*1..]->(g:Group {domain:{domain}})
             WHERE g.objectsid ENDS WITH "-512"
             RETURN DISTINCT(c.name)
             ORDER BY c.name ASC
@@ -208,16 +208,16 @@ critical_asset_analysis:
         name: Domain Admin GPO Controllers
         type: list
         query: |
-            MATCH (DAUser)-[:MemberOf*1..]->(g:Group {{domain:{domain}}})
+            MATCH (DAUser)-[:MemberOf*1..]->(g:Group {domain:{domain}})
             WHERE g.objectsid ENDS WITH "-512"
-            OPTIONAL MATCH p1 = (g1:GPO)-[r1:GpLink {{enforced:true}}]->(container1)-[r2:Contains*1..]->(DAUser)
-            OPTIONAL MATCH p2 = (g2:GPO)-[r3:GpLink {{enforced:false}}]->(container2)-[r4:Contains*1..]->(DAUser)
+            OPTIONAL MATCH p1 = (g1:GPO)-[r1:GpLink {enforced:true}]->(container1)-[r2:Contains*1..]->(DAUser)
+            OPTIONAL MATCH p2 = (g2:GPO)-[r3:GpLink {enforced:false}]->(container2)-[r4:Contains*1..]->(DAUser)
             WHERE NONE (x in NODES(p2) WHERE x.blocksinheritance = true AND x:OU AND NOT (g2)-->(x))
             WITH COLLECT(g1) + COLLECT(g2) AS tempVar1
             UNWIND tempVar1 as tempVar2
             WITH DISTINCT(tempVar2) as GPOs
-            OPTIONAL MATCH (n)-[{{isacl:true}}]->(GPOs)
-            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{{isacl:true}}]->(GPOs)
+            OPTIONAL MATCH (n)-[{isacl:true}]->(GPOs)
+            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{isacl:true}]->(GPOs)
             WITH COLLECT(n) + COLLECT(m) as tempVar1
             UNWIND tempVar1 as tempVar2
             RETURN DISTINCT(tempVar2.name)
@@ -225,9 +225,9 @@ critical_asset_analysis:
         name: High Value Object Controllers
         type: list
         query: |
-            MATCH (u:User)-[:MemberOf*1..]->(g:Group {{domain:{domain},highvalue:true}})
-            OPTIONAL MATCH (n)-[{{isacl:true}}]->(u)
-            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{{isacl:true}}]->(u)
+            MATCH (u:User)-[:MemberOf*1..]->(g:Group {domain:{domain},highvalue:true})
+            OPTIONAL MATCH (n)-[{isacl:true}]->(u)
+            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{isacl:true}]->(u)
             WITH COLLECT(n) + COLLECT(m) as tempVar
             UNWIND tempVar as highValueControllers
             RETURN DISTINCT(highValueControllers.name)
@@ -236,22 +236,22 @@ critical_asset_analysis:
         name: High Value User Sessions
         type: list
         query: |
-            MATCH (c:Computer)-[:HasSession]->(u:User)-[:MemberOf*1..]->(g:Group {{domain:{domain},highvalue:true}})
+            MATCH (c:Computer)-[:HasSession]->(u:User)-[:MemberOf*1..]->(g:Group {domain:{domain},highvalue:true})
             RETURN DISTINCT(c.name)
             ORDER BY c.name ASC
     12:
         name: High Value User GPO Controllers
         type: list
         query: |
-            MATCH (u:User)-[:MemberOf*1..]->(g:Group {{domain:{domain},highvalue:true}})
-            OPTIONAL MATCH p1 = (g1:GPO)-[r1:GpLink {{enforced:true}}]->(container1)-[r2:Contains*1..]->(u)
-            OPTIONAL MATCH p2 = (g2:GPO)-[r3:GpLink {{enforced:false}}]->(container2)-[r4:Contains*1..]->(u)
+            MATCH (u:User)-[:MemberOf*1..]->(g:Group {domain:{domain},highvalue:true})
+            OPTIONAL MATCH p1 = (g1:GPO)-[r1:GpLink {enforced:true}]->(container1)-[r2:Contains*1..]->(u)
+            OPTIONAL MATCH p2 = (g2:GPO)-[r3:GpLink {enforced:false}]->(container2)-[r4:Contains*1..]->(u)
             WHERE NONE (x in NODES(p2) WHERE x.blocksinheritance = true AND x:OU AND NOT (g2)-->(x))
             WITH COLLECT(g1) + COLLECT(g2) AS tempVar1
             UNWIND tempVar1 as tempVar2
             WITH DISTINCT(tempVar2) as GPOs
-            OPTIONAL MATCH (n)-[{{isacl:true}}]->(GPOs)
-            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{{isacl:true}}]->(GPOs)
+            OPTIONAL MATCH (n)-[{isacl:true}]->(GPOs)
+            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{isacl:true}]->(GPOs)
             WITH COLLECT(n) + COLLECT(m) as tempVar1
             UNWIND tempVar1 as tempVar2
             RETURN DISTINCT(tempVar2.name)
@@ -261,7 +261,7 @@ low_hanging_fruit:
         name: Domain Users With Local Admin
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid ENDS WITH "-513"
             OPTIONAL MATCH (g)-[:AdminTo]->(c1)
             OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[:AdminTo]->(c2)
@@ -272,7 +272,7 @@ low_hanging_fruit:
         name: Everyone With Local Admin
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid = "S-1-1-0"
             OPTIONAL MATCH (g)-[:AdminTo]->(c1)
             OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[:AdminTo]->(c2)
@@ -283,7 +283,7 @@ low_hanging_fruit:
         name: Authenticated Users With Local Admin
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid = "S-1-5-11"
             OPTIONAL MATCH (g)-[:AdminTo]->(c1)
             OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[:AdminTo]->(c2)
@@ -294,10 +294,10 @@ low_hanging_fruit:
         name: Objects Controlled by Domain Users
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid ENDS WITH "-513"
-            OPTIONAL MATCH (g)-[{{isacl:true}}]->(n)
-            OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[{{isacl:true}}]->(m)
+            OPTIONAL MATCH (g)-[{isacl:true}]->(n)
+            OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[{isacl:true}]->(m)
             WITH COLLECT(n) + COLLECT(m) as tempVar
             UNWIND tempVar AS objects
             RETURN DISTINCT(objects)
@@ -306,10 +306,10 @@ low_hanging_fruit:
         name: Objects Controlled by Everyone
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid = 'S-1-1-0'
-            OPTIONAL MATCH (g)-[{{isacl:true}}]->(n)
-            OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[{{isacl:true}}]->(m)
+            OPTIONAL MATCH (g)-[{isacl:true}]->(n)
+            OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[{isacl:true}]->(m)
             WITH COLLECT(n) + COLLECT(m) as tempVar
             UNWIND tempVar AS objects
             RETURN DISTINCT(objects)
@@ -318,10 +318,10 @@ low_hanging_fruit:
         name: Objects Controlled by Authenticated Users
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid = 'S-1-5-11'
-            OPTIONAL MATCH (g)-[{{isacl:true}}]->(n)
-            OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[{{isacl:true}}]->(m)
+            OPTIONAL MATCH (g)-[{isacl:true}]->(n)
+            OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[{isacl:true}]->(m)
             WITH COLLECT(n) + COLLECT(m) as tempVar
             UNWIND tempVar AS objects
             RETURN DISTINCT(objects)
@@ -330,7 +330,7 @@ low_hanging_fruit:
         name: Domain Users With RDP Rights
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid ENDS WITH "-513"
             OPTIONAL MATCH (g)-[:CanRDP]->(c1)
             OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[:CanRDP]->(c2)
@@ -341,7 +341,7 @@ low_hanging_fruit:
         name: Everyone With RDP Rights
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid = "S-1-1-0"
             OPTIONAL MATCH (g)-[:CanRDP]->(c1)
             OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[:CanRDP]->(c2)
@@ -352,7 +352,7 @@ low_hanging_fruit:
         name: Authenticated Users With RDP Rights
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid = "S-1-5-11"
             OPTIONAL MATCH (g)-[:CanRDP]->(c1)
             OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[:CanRDP]->(c2)
@@ -363,7 +363,7 @@ low_hanging_fruit:
         name: Domain Users With DCOM Rights
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid ENDS WITH "-513"
             OPTIONAL MATCH (g)-[:ExecuteDCOM]->(c1)
             OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[:ExecuteDCOM]->(c2)
@@ -374,7 +374,7 @@ low_hanging_fruit:
         name: Everyone With DCOM Rights
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid = "S-1-1-0"
             OPTIONAL MATCH (g)-[:ExecuteDCOM]->(c1)
             OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[:ExecuteDCOM]->(c2)
@@ -385,7 +385,7 @@ low_hanging_fruit:
         name: Authenticated Users With RDP Rights
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid = "S-1-5-11"
             OPTIONAL MATCH (g)-[:ExecuteDCOM]->(c1)
             OPTIONAL MATCH (g)-[:MemberOf*1..]->(:Group)-[:ExecuteDCOM]->(c2)
@@ -396,9 +396,9 @@ low_hanging_fruit:
         name: Shortest ACL Path Length (Domain Users)
         type: int
         query: |
-            MATCH (g1:Group {{domain:{domain}}})
+            MATCH (g1:Group {domain:{domain}})
             WHERE g1.objectsid ENDS WITH "-513"
-            MATCH (g2:Group {domain:{{domain}}})
+            MATCH (g2:Group {domain:{domain}})
             WHERE g2.objectsid ENDS WITH "-512"
             MATCH p = shortestPath((g1)-[:Owns|AllExtendedRights|ForceChangePassword|GenericAll|GenericWrite|WriteDacl|WriteOwner*1..]->(g2))
             RETURN LENGTH(p)
@@ -406,9 +406,9 @@ low_hanging_fruit:
         name: Shortest Derivative Path Length (Domain Users)
         type: int
         query: |
-            MATCH (g1:Group {{domain:{domain}}})
+            MATCH (g1:Group {domain:{domain}})
             WHERE g1.objectsid ENDS WITH "-513"
-            MATCH (g2:Group {{domain:{domain}}})
+            MATCH (g2:Group {domain:{domain}})
             WHERE g2.objectsid ENDS WITH "-512"
             MATCH p = shortestPath((g1)-[:AdminTo|HasSession|MemberOf*1..]->(g2))
             RETURN LENGTH(p)
@@ -416,9 +416,9 @@ low_hanging_fruit:
         name: Shortest Hybrid Path Length (Domain Users)
         type: int
         query: |
-            MATCH (g1:Group {{domain:{domain}}})
+            MATCH (g1:Group {domain:{domain}})
             WHERE g1.objectsid ENDS WITH "-513"
-            MATCH (g2:Group {{domain:{domain}}})
+            MATCH (g2:Group {domain:{domain}})
             WHERE g2.objectsid ENDS WITH "-512"
             MATCH p = shortestPath((g1)-[r*1..]->(g2))
             WHERE NONE(rel in r WHERE type(rel)="GetChanges")
@@ -429,9 +429,9 @@ low_hanging_fruit:
         name: Shortest ACL Path Length (Everyone)
         type: int
         query: |
-            MATCH (g1:Group {{domain:{domain}}})
+            MATCH (g1:Group {domain:{domain}})
             WHERE g1.objectsid = 'S-1-1-0'
-            MATCH (g2:Group {{domain:{domain}}})
+            MATCH (g2:Group {domain:{domain}})
             WHERE g2.objectsid ENDS WITH "-512"
             MATCH p = shortestPath((g1)-[:Owns|AllExtendedRights|ForceChangePassword|GenericAll|GenericWrite|WriteDacl|WriteOwner*1..]->(g2))
             RETURN LENGTH(p)
@@ -439,9 +439,9 @@ low_hanging_fruit:
         name: Shortest Derivative Path Length (Everyone)
         type: int
         query: |
-            MATCH (g1:Group {{domain:{domain}}})
+            MATCH (g1:Group {domain:{domain}})
             WHERE g1.objectsid = 'S-1-1-0'
-            MATCH (g2:Group {{domain:{domain}}})
+            MATCH (g2:Group {domain:{domain}})
             WHERE g2.objectsid ENDS WITH "-512"
             MATCH p = shortestPath((g1)-[r*1..]->(g2))
             WHERE NONE(rel in r WHERE type(rel)="GetChanges")
@@ -452,9 +452,9 @@ low_hanging_fruit:
         name: Shortest ACL Path Length (Authenticated Users)
         type: int
         query: |
-            MATCH (g1:Group {{domain:{domain}}})
+            MATCH (g1:Group {domain:{domain}})
             WHERE g1.objectsid = 'S-1-5-11'
-            MATCH (g2:Group {{domain:{domain}}})
+            MATCH (g2:Group {domain:{domain}})
             WHERE g2.objectsid ENDS WITH "-512"
             MATCH p = shortestPath((g1)-[:Owns|AllExtendedRights|ForceChangePassword|GenericAll|GenericWrite|WriteDacl|WriteOwner*1..]->(g2))
             RETURN LENGTH(p)
@@ -462,9 +462,9 @@ low_hanging_fruit:
         name: Shortest Derivative Path Length (Authenticated Users)
         type: int
         query: |
-            MATCH (g1:Group {{domain:{domain}}})
+            MATCH (g1:Group {domain:{domain}})
             WHERE g1.objectsid = 'S-1-5-11'
-            MATCH (g2:Group {{domain:{domain}}})
+            MATCH (g2:Group {domain:{domain}})
             WHERE g2.objectsid ENDS WITH "-512"
             MATCH p = shortestPath((g1)-[:AdminTo|HasSession|MemberOf*1..]->(g2))
             RETURN LENGTH(p)
@@ -472,9 +472,9 @@ low_hanging_fruit:
         name: Shortest Hybrid Path Length (Authenticated Users)
         type: int
         query: |
-            MATCH (g1:Group {{domain:{domain}}})
+            MATCH (g1:Group {domain:{domain}})
             WHERE g1.objectsid = 'S-1-5-11'
-            MATCH (g2:Group {{domain:{domain}}})
+            MATCH (g2:Group {domain:{domain}})
             WHERE g2.objectsid ENDS WITH "-512"
             MATCH p = shortestPath((g1)-[r*1..]->(g2))
             WHERE NONE(rel in r WHERE type(rel)="GetChanges")
@@ -485,8 +485,8 @@ low_hanging_fruit:
         name: Kerberostable User to DA Path Legth
         type: int
         query: |
-            MATCH (u:User {{domain:{domain},hasspn:true}})
-            MATCH (g:Group {{domain:{domain}}})
+            MATCH (u:User {domain:{domain},hasspn:true})
+            MATCH (g:Group {domain:{domain}})
             WHERE g.objectsid ENDS WITH "-512" AND NOT u.name STARTS WITH "KRBTGT@"
             MATCH p = shortestPath((u)-[*1..]->(g))
             RETURN u.name,LENGTH(p)
@@ -495,7 +495,7 @@ low_hanging_fruit:
         name: Computers with > 1000 Admins
         type: list
         query: |
-            MATCH (c:Computer {{domain:{domain}}})
+            MATCH (c:Computer {domain:{domain}})
             OPTIONAL MATCH (n)-[:AdminTo]->(c)
             OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[:AdminTo]->(c)
             WITH COLLECT(n) + COLLECT(m) as tempVar,c
@@ -507,7 +507,7 @@ cross_domain_analysis:
         name: Computers with Foreign Admins
         type: list
         query: |
-            MATCH (c:Computer {{domain:{domain}}})
+            MATCH (c:Computer {domain:{domain}})
             OPTIONAL MATCH (n)-[:AdminTo]->(c)
             WHERE (n:User OR n:Computer) AND NOT n.domain = c.domain
             OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[:AdminTo]->(c)
@@ -522,9 +522,9 @@ cross_domain_analysis:
         query: |
             MATCH (g:GPO)
             WHERE SPLIT(g.name,'@')[1] = {domain}
-            OPTIONAL MATCH (n)-[{{isacl:true}}]->(g)
+            OPTIONAL MATCH (n)-[{isacl:true}]->(g)
             WHERE (n:User OR n:Computer) AND NOT n.domain = {domain}
-            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{{isacl:true}}]->(g)
+            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{isacl:true}]->(g)
             WHERE (m:User OR m:Computer) AND NOT m.domain = {domain}
             WITH COLLECT(n) + COLLECT(m) AS tempVar,g
             UNWIND tempVar AS foreignGPOControllers
@@ -534,10 +534,10 @@ cross_domain_analysis:
         name: GPOs with Foreign Controllers
         type: list
         query: |
-            MATCH (g:Group {{domain:{domain}}})
-            OPTIONAL MATCH (n)-[{{isacl:true}}]->(g)
+            MATCH (g:Group {domain:{domain}})
+            OPTIONAL MATCH (n)-[{isacl:true}]->(g)
             WHERE (n:User OR n:Computer) AND NOT n.domain = g.domain
-            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{{isacl:true}}]->(g)
+            OPTIONAL MATCH (m)-[:MemberOf*1..]->(:Group)-[{isacl:true}]->(g)
             WHERE (m:User OR m:Computer) AND NOT m.domain = g.domain
             WITH COLLECT(n) + COLLECT(m) AS tempVar,g
             UNWIND tempVar AS foreignGroupControllers
