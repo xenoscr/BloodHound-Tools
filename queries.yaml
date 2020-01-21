@@ -1,87 +1,86 @@
 ---
-front:
-    node_statistics:
-        1:
-            name: Users
-            type: int
-            query: |
-                MATCH (n:User {domain:{domain}}) RETURN count(n)
-        2:
-            name: Groups
-            type: int
-            query: |
-                MATCH (n:Group {domain:{domain}}) RETURN count(n)
-        3:
-            name: Computers
-            type: int
-            query: |
-                MATCH (n:Computer {domain:{domain}}) RETURN count(n)
-        4:
-            name: Domains
-            type: int   
-            query: |
-                MATCH (n:Domain {domain:{domain}}) RETURN count(n)
-        5:
-            name: GPOs
-            type: int
-            query: |
-                MATCH (n:GPO {domain:{domain}}) RETURN count(n)
-        6:
-            name: OUs
-            type: int
-            query: |
-                MATCH (n:OU {domain:{domain}}) RETURN count(n)
-    edge_statistics:
-        1:
-            name: MemberOf
-            type: int
-            query: |
-               MATCH ()-[r:MemberOf]->({domain:{domain}}) RETURN count(r) 
-        2:
-            name: AdminTo
-            type: int
-            query: |
-                MATCH ()-[r:AdminTo]->({domain:{domain}}) RETURN count(r)
-        3:
-            name: HasSession
-            type: int
-            query: |
-                MATCH ()-[r:HasSession]->({domain:{domain}}) RETURN count(r)
-        4:
-            name: GpLinks
-            type: int
-            query: |
-                MATCH ()-[r:GpLink]->({domain:{domain}}) RETURN count(r)
-        5:
-            name: ACLs
-            type: int
-            query: |
-                MATCH ()-[r {isacl:true}]->({domain:{domain}}) RETURN count(r)
-    qa_statistics:
-        1:
-            name: Computers With Local Admin Data
-            type: int
-            query: |
-                MATCH (n)-[:AdminTo]->(c:Computer {domain:{domain}})
-                WITH COUNT(DISTINCT(c)) as computersWithAdminsCount
-                MATCH (c2:Computer {domain:{domain}})
-                RETURN toInt(100 * (toFloat(computersWithAdminsCount) / COUNT(c2)))
-        2:
-            name: Computers With Session Data
-            type: int
-            query: |
-                MATCH (c:Computer {domain:{domain}})-[:HasSession]->()
-                WITH COUNT(DISTINCT(c)) as computersWithSessions
-                MATCH (c2:Computer {domain:{domain}})
-                RETURN toInt(100 * (toFloat(computersWithSessions) / COUNT(c2)))
-        3:
-            name: Users With Session Data
-            type: int
-            query: |
-                MATCH ()-[:HasSession]->(u:User {domain:{domain}})
-                WITH COUNT(DISTINCT(u)) as usersWithSessions
-                MATCH (u2:User {domain:{domain},enabled:true})
-                RETURN toInt(100 * (toFloat(usersWithSessions) / COUNT(u2)))
+node_statistics:
+    1:
+        name: Users
+        type: int
+        query: |
+            MATCH (n:User {domain:{domain}}) RETURN count(n)
+    2:
+        name: Groups
+        type: int
+        query: |
+            MATCH (n:Group {domain:{domain}}) RETURN count(n)
+    3:
+        name: Computers
+        type: int
+        query: |
+            MATCH (n:Computer {domain:{domain}}) RETURN count(n)
+    4:
+        name: Domains
+        type: int   
+        query: |
+            MATCH (n:Domain {domain:{domain}}) RETURN count(n)
+    5:
+        name: GPOs
+        type: int
+        query: |
+            MATCH (n:GPO {domain:{domain}}) RETURN count(n)
+    6:
+        name: OUs
+        type: int
+        query: |
+            MATCH (n:OU {domain:{domain}}) RETURN count(n)
+edge_statistics:
+    1:
+        name: MemberOf
+        type: int
+        query: |
+           MATCH ()-[r:MemberOf]->({domain:{domain}}) RETURN count(r) 
+    2:
+        name: AdminTo
+        type: int
+        query: |
+            MATCH ()-[r:AdminTo]->({domain:{domain}}) RETURN count(r)
+    3:
+        name: HasSession
+        type: int
+        query: |
+            MATCH ()-[r:HasSession]->({domain:{domain}}) RETURN count(r)
+    4:
+        name: GpLinks
+        type: int
+        query: |
+            MATCH ()-[r:GpLink]->({domain:{domain}}) RETURN count(r)
+    5:
+        name: ACLs
+        type: int
+        query: |
+            MATCH ()-[r {isacl:true}]->({domain:{domain}}) RETURN count(r)
+qa_statistics:
+    1:
+        name: Computers With Local Admin Data
+        type: int
+        query: |
+            MATCH (n)-[:AdminTo]->(c:Computer {domain:{domain}})
+            WITH COUNT(DISTINCT(c)) as computersWithAdminsCount
+            MATCH (c2:Computer {domain:{domain}})
+            RETURN toInt(100 * (toFloat(computersWithAdminsCount) / COUNT(c2)))
+    2:
+        name: Computers With Session Data
+        type: int
+        query: |
+            MATCH (c:Computer {domain:{domain}})-[:HasSession]->()
+            WITH COUNT(DISTINCT(c)) as computersWithSessions
+            MATCH (c2:Computer {domain:{domain}})
+            RETURN toInt(100 * (toFloat(computersWithSessions) / COUNT(c2)))
+    3:
+        name: Users With Session Data
+        type: int
+        query: |
+            MATCH ()-[:HasSession]->(u:User {domain:{domain}})
+            WITH COUNT(DISTINCT(u)) as usersWithSessions
+            MATCH (u2:User {domain:{domain},enabled:true})
+            RETURN toInt(100 * (toFloat(usersWithSessions) / COUNT(u2)))
 critical_asset_analysis:
     1:
         name: Admins on Domain Controllers

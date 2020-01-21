@@ -40,67 +40,36 @@ def newFileName(domain):
 def input_default(prompt, default):
     return input("%s [%s] " % (prompt, default)) or default
     
-def create_workbook():
-    try:
-        wb = Workbook()
-        ws = wb.active
-        ws.title = 'Front Page'
-        wb.create_sheet(title='Critical Assets')
-        wb.create_sheet(title='Low Hanging Fruit')
-        wb.create_sheet(title='Cross Domain Attacks')
-        logging.debug('Workbook successfully initialized.')
-        return wb
-    except Exception as e:
-        logging.error('Failed to initialize workbook.')
-        logging.error(e)
-        raise SystemExit
-
-def write_cell(workbook, sheetNum, row, column, text):
-    try:
-        workbook._sheets[sheetNum].cell(row, column, value=text)
-    except Exception as e:
-        logging.error('Failed to update cell contents.')
-        logging.errot(e)
-
-def write_column(workbook, sheetNum, row, column, title, results):
-    try:
-        count = len(results)    
-        sheet = workbook._sheets[sheetNum]
-        # Update title cell
-        font = styles.font(bold=True)
-        titleCell = sheet.cell(row, column)
-        titleCell.font = font
-        sheet.cell(row, column, value=title.format(count))
-        
-        # Update the rows
-        for i in xrange(1, count):
-            sheet.cell(i+1, column, value=results[i])
-    except Exception as e:
-        logging.error('Failed to write column data.')
-        logging.error(e)
-        
-def save_workbook(workbook, outputFile):
-    for worksheet in workbook._sheets:
-        for col in worksheet.columns:
-            max_length = 0
-            column = col[0].column  # Get the column name
-            for cell in col:
-                try:  # Necessary to avoid error on empty cells
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(cell.value)
-                except:
-                    pass
-            adjusted_width = (max_length + 2) * 1.2
-            worksheet.column_dimensions[get_column_letter(column)].width = adjusted_width
-    workbook.save(outputFile)
     
-def do_statistics_column(bhMain, workbook, nodeQueries, col, title):
-    write_cell(workbook, 0, 1, col, title)
-    
+def do_statistics_column(bhMain, queryHeading, col, title):
+    queries = bhMain.queryData[queryHeading]
     # Run through the queries & updat the cells
-    for i in range(1, len(nodeQueries)):
-        result = bhMain.runQuery(nodeQueries[i])
-        write_cell(workbook, 0, i+1, col, '{name}: {value}'.format(name = nodeQueries[i]['name'], value = result))
+    results = []
+    for i in range(1, len(queries)):
+        result = bhMain.runQuery(queries[i])
+        results.append('{name}: {value}'.format(name = queries[i]['name'], value = result))
+    bhMain.write_column(0, 1, col, title, results)
+    
+def do_full_sheet(bhMain, sheetNum, queryHeading):
+    queries = bhMain.queryData[queryHeading]
+    
+    for i in range(1, len(queries)):
+        results = bhMain.runQuery(queries[i])
+        if results:
+            bhMain.write_column(sheetNum, 1, i, queries[i]['name'], results)
+
+def print_header(message):
+    fullMsg = '[+] ' + message
+    padding = '-' * (80 - 1 - len(fullMsg))
+    print(fullMsg + ' ' + padding)
+    
+def print_prog_info():
+    print('-' * 80)
+    print('BloodHound Analytics Script\n')
+    print('Original Authors:\n\tAndy Robbins (@_wald0),\n\tRohan Vazarkar (@CptJesus)\n\thttps://www.specterops.io/\n')
+    print('Python3 Re-Write Author:\n\tConor Richard (@xenoscr)')
+    print('-' * 80)
+    print('')
     
 class bhAnalytics(object):
     def __init__(self, logging, domain, outputFile, queryFile=None):
@@ -166,8 +135,6 @@ class bhAnalytics(object):
             self.logging.debug('Unable to connect to the neo4j database')
             self.logging.error(e)
             
-        print(result[0])
-
         if (int(result[0]) > 0):
             return True
         else:
@@ -176,7 +143,7 @@ class bhAnalytics(object):
     def closeDB(self):
         try:
             self.driver.close()
-            logging.debug('Successfully closed Neo4j database.')
+            logging.info('Successfully closed Neo4j database.')
         except Exception as e:
             logging.error('Failed to close Neo4j database.')
             logging.error(e)
@@ -186,7 +153,9 @@ class bhAnalytics(object):
         queryType = queryYAML['type']
         try:
             session = self.driver.session()
+            start = timer()
             results = session.run(query, domain=self.domain)
+            logging.info('{} ran in {}s'.format(queryYAML['name'], timer() - start))
         except Exception as e:
             logging.error('Query failed.')
             logging.error(e)
@@ -203,6 +172,60 @@ class bhAnalytics(object):
         else:
             return None
 
+    def create_workbook(self):
+        try:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = 'Front Page'
+            wb.create_sheet(title='Critical Assets')
+            wb.create_sheet(title='Low Hanging Fruit')
+            wb.create_sheet(title='Cross Domain Attacks')
+            logging.debug('Workbook successfully initialized.')
+            self.workbook = wb
+        except Exception as e:
+            logging.error('Failed to initialize workbook.')
+            logging.error(e)
+            raise SystemExit
+
+    def write_cell(self, sheetNum, row, column, text):
+        try:
+            self.workbook._sheets[sheetNum].cell(row, column, value=text)
+        except Exception as e:
+            logging.error('Failed to update cell contents.')
+            logging.errot(e)
+
+    def write_column(self, sheetNum, row, column, title, results):
+        try:
+            count = len(results)    
+            sheet = self.workbook._sheets[sheetNum]
+            # Update title cell
+            font = styles.Font(bold=True)
+            titleCell = sheet.cell(row, column)
+            titleCell.font = font
+            sheet.cell(row, column, value=title.format(count))
+            
+            # Update the rows
+            for i in range(0, count):
+                sheet.cell(i+row+1, column, value=results[i])
+        except Exception as e:
+            logging.error('Failed to write column data.')
+            logging.error(e)
+            
+    def save_workbook(self):
+        for worksheet in self.workbook._sheets:
+            for col in worksheet.columns:
+                max_length = 0
+                column = col[0].column  # Get the column name
+                for cell in col:
+                    try:  # Necessary to avoid error on empty cells
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(cell.value)
+                    except:
+                        pass
+                adjusted_width = (max_length + 2) * 1.2
+                worksheet.column_dimensions[get_column_letter(column)].width = adjusted_width
+        self.workbook.save(outputFile)
+        
 def main(logging, domain, outputFile):
     # Instantiate a new bhAnalytics Object
     bhMain = bhAnalytics(logging, domain, outputFile)
@@ -215,38 +238,54 @@ def main(logging, domain, outputFile):
     # Show the current DB settings and prompt to change
     bhMain.showDBInfo()
     if query_yes_no('Would you like to change the neo4j DB settings?'):
-        bhMain.updateDBInfo()
+        IhMain.updateDBInfo()
 
+    # Space it out a bit
+    print('\n')
+    
     # Connect to the Neo4j Database
+    print_header('Connecting to Neo4j Database')
     bhMain.connectDB()
 
+    print_header('Creating workbook')
     # Create a workbook object
-    bhWorkBook = create_workbook()
+    bhMain.create_workbook()
     
     # Front Page -----------------------------------------------------------------------------------------------
     # Node Statistics
-    do_statistics_column(bhMain, bhWorkBook, bhMain.queryData['front']['node_statistics'], 1, 'Node Statistics')
+    print_header('Running Statistical Analysis')
+    do_statistics_column(bhMain, 'node_statistics', 1, 'Node Statistics')
+    
     # Edge Statistics
-    do_statistics_column(bhMain, bhWorkBook, bhMain.queryData['front']['edge_statistics'], 2, 'Edge Statistics')
+    do_statistics_column(bhMain, 'edge_statistics', 2, 'Edge Statistics')
+    
     # QA Info
-    do_statistics_column(bhMain, bhWorkBook, bhMain.queryData['front']['qa_statistics'], 3, 'QA Information')
+    do_statistics_column(bhMain, 'qa_statistics', 3, 'QA Information')
     
     # Critical Analysis ----------------------------------------------------------------------------------------
+    print_header('Running Critical Asset Analysis')
+    do_full_sheet(bhMain, 1, 'critical_asset_analysis')
     
     # Low Hanging Fruit Analysis
+    print_header('Running Low Hanging Fruit Analysis')
+    do_full_sheet(bhMain, 2, 'low_hanging_fruit')
     
     # Cross Domain Analysis
+    print_header('Running Cross Domain Analysis')
+    do_full_sheet(bhMain, 3, 'cross_domain_analysis')
     
     # Save the workbook
-    save_workbook(bhWorkBook, outputFile)
+    print_header('Saving Workbook')
+    bhMain.save_workbook()
     
     # Close the Neo4j Database
     bhMain.closeDB()
 
 if __name__ == "__main__":
+    print_prog_info()
     # Setup logging
-    logLvl = logging.DEBUG
-    logging.basicConfig(level=logLvl, format='%(asctime)s - %(levelname)s - %(message)s')
+    logLvl = logging.INFO
+    logging.basicConfig(level=logLvl, format='%(asctime)s - %(levelname)s: %(message)s')
     logging.debug('Debugging logging is on.')
 
     # Parse the command line arguments and display a help message in incorrec tparameters are provided
@@ -264,10 +303,12 @@ if __name__ == "__main__":
             if checkOutputPath(args.outputfile):
                 answer = query_yes_no('The specified output file already exists. Do you wish to overwrite it?')
                 if answer == True:
-                    outputFile = args.outputFile
+                    outputFile = args.outputfile
                 else:
                     print('Please specify another output file name.')
                     parser.print_help(sys.stderr)
+            else:
+                outputFile = args.outputfile
         else:
             outputFile = newFileName(domain)
         # Call the main function
